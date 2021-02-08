@@ -4,6 +4,7 @@ import os
 import PIL
 import argparse
 import urllib
+from sklearn.neighbors import NearestNeighbors, kneighbors
 
 from keras.preprocessing.image import load_img 
 from keras.preprocessing.image import img_to_array 
@@ -15,14 +16,9 @@ from keras.models import Model
 
 class ImageRetreival:
 
-    class Image:
-        def __init__(self, filename, map, mat):
-            this.name = filename
-            this.feature_map =  map
-            this.mat = mat
-
     def __init__(self, search_string):
         self.myImages = []
+        self.features = []
         self.model = VGG16(weights='imagenet', include_top=False)
         self.search_string = search_string
         self.target_image = None
@@ -41,7 +37,8 @@ class ImageRetreival:
                 #store these
                 feature_map = np.asarray(vgg16_feature).flatten()
 
-                imObject = new Image(name, feature_map, mat)
+                self.features.append(feature_map)
+                imObject = Image(name, feature_map, mat)
                 self.myImages.append(imObject)
 
     def url_to_image(self, url):
@@ -99,7 +96,21 @@ class ImageRetreival:
         self.target_image = new Image(target_url, feature_map, image)
 
     def get_nearest_neighbors(self):
-        
+        num_neighbors = 5
+        neighbors = NearestNeighbors(n_neighbors=num_neighbors, algorithm='brute', metric='euclidian').fit(self.features)
+        distances, indices = kneighbors([self.target_image])
+        print(indices)
+        for index in indices:
+            cv2.imshow(self.myImages[index].name, self.myImages.mat)
+            cv2.waitKey()
+        cv2.destroyAllWindows()
+        return
+
+    class Image:
+        def __init__(self, filename, fmap, mat):
+            this.name = filename
+            this.feature_map = fmap
+            this.mat = mat
 
 
     def main(self, query):
@@ -109,7 +120,6 @@ class ImageRetreival:
 
 
 if __name == '__main__':
-
     parser.add_argument('--search', type = string, help = 'Google Images search query', default = "cow")
     args = parser.parse_args()
     main(arg.search)
