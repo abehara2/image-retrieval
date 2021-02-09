@@ -37,10 +37,10 @@ class ImageRetreival:
             for file in files:
                 #store these
                 name = file.name
-                mat_pre = load_img(name, target_size=(224, 224))
-                mat = img_to_array(mat_pre)
-                #mat = cv2.imread(name)
-                #mat = cv2.resize(mat, (224, 224))
+                print(name)
+                mat_pre = cv2.imread(name)
+                mat = load_img(name, target_size=(224, 224))
+                mat = img_to_array(mat)
                 img_data = np.expand_dims(mat, axis=0)
                 img_data = preprocess_input(img_data)
                 vgg16_feature = self.model.predict(img_data)
@@ -55,11 +55,13 @@ class ImageRetreival:
     def url_to_image(self, url):
         resp = urllib.request.urlopen(url)
         image = np.asarray(bytearray(resp.read()),dtype='uint8')
-        image = cv2.imdecode(image, cv2,IMREAD_COLOR)
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
         return image
 
     def get_search_results(self):
-        browser = webdriver.Chrome()
+        print(os.getcwd)
+        browser = webdriver.Chrome(executable_path='../chromedriver.exe')
+        #browser = webdriver.Chrome()
         search_url = f"https://www.google.com/search?site=&tbm=isch&source=hp&biw=1873&bih=990&q={self.search_string}"
         images_url = []
 
@@ -81,29 +83,29 @@ class ImageRetreival:
                 big_img = element[1].find_element_by_class_name('n3VNCb')
 
             images_url.append(big_img.get_attribute("src"))
-
-            # # write image to file
-            # reponse = requests.get(images_url[count])
-            # if reponse.status_code == 200:
-            #     with open(f"search{count+1}.jpg","wb") as file:
-            #         file.write(reponse.content)
-
+            
             count += 1
 
             # Stop get and save after 5
             if count == 5:
                 break
-        print(images_url)
         
+        counter = 0
         for url in images_url:
-            im = self.url_to_image(url)
-            cv2.imshow("Target Image", im)
-            cv2.waitKey()
+            counter+=1
+            reponse = requests.get(images_url[0])
+            if reponse.status_code == 200:
+                im = self.url_to_image(images_url[0])
+                image = cv2.resize(im, (750,750))
+                cv2.imshow("Sample Image " + str(counter), image)
+                cv2.waitKey()
         
-        cv2.destroyAllWindows()
-
+        #cv2.destroyAllWindows()
+        
+        print("\n")
         print("Which image # is closest to what you want?")
         inp_num = int(input())
+        print("\n")
 
         target_url = images_url[inp_num - 1]
         image_pre = self.url_to_image(target_url)
@@ -117,11 +119,13 @@ class ImageRetreival:
         self.target_image = self.Image(target_url, feature_map, image_pre)      
 
     def get_nearest_neighbors(self):
-        num_neighbors = 1
-        neighbors = NearestNeighbors(n_neighbors=num_neighbors, algorithm='brute', metric='euclidian').fit(self.features)
-        distances, indices = neighbors.kneighbors([self.target_image])
-        cv2.imshow(self.myImages[indices[0]].name, self.myImages[indices[0]].mat)
-        cv2.waitKey()
+        num_neighbors = 3
+        neighbors = NearestNeighbors(n_neighbors=num_neighbors).fit(self.features)
+        distances, indices = neighbors.kneighbors([self.target_image.feature_map])
+        for i in range(len(indices[0])):
+            index = indices[0][i]
+            cv2.imshow(self.myImages[index].name, self.myImages[index].mat)
+            cv2.waitKey()
         cv2.destroyAllWindows()
         return
 
